@@ -69,7 +69,7 @@ type Session struct {
 	// Exposed but should not be modified by User.
 
 	// Whether the Data Websocket is ready
-	DataReady bool // NOTE: Maye be deprecated soon
+	DataReady bool // NOTE: Maybe deprecated soon
 
 	// Max number of REST API retries
 	MaxRestRetries int
@@ -122,6 +122,9 @@ type Session struct {
 
 	// sequence tracks the current gateway api websocket sequence number
 	sequence *int64
+
+	// stores sessions current Discord Resume Gateway
+	resumeGatewayURL string
 
 	// stores sessions current Discord Gateway
 	gateway string
@@ -609,7 +612,7 @@ type Emoji struct {
 
 // EmojiRegex is the regex used to find and identify emojis in messages
 var (
-	EmojiRegex = regexp.MustCompile(`<(a|):[A-z0-9_~]+:[0-9]{18,20}>`)
+	EmojiRegex = regexp.MustCompile(`<(a|):[A-Za-z0-9_~]+:[0-9]{18,20}>`)
 )
 
 // MessageFormat returns a correctly formatted Emoji for use in Message content and embeds
@@ -1316,27 +1319,35 @@ type GuildFeature string
 
 // Constants for GuildFeature
 const (
-	GuildFeatureAnimatedBanner                GuildFeature = "ANIMATED_BANNER"
-	GuildFeatureAnimatedIcon                  GuildFeature = "ANIMATED_ICON"
-	GuildFeatureAutoModeration                GuildFeature = "AUTO_MODERATION"
-	GuildFeatureBanner                        GuildFeature = "BANNER"
-	GuildFeatureCommunity                     GuildFeature = "COMMUNITY"
-	GuildFeatureDiscoverable                  GuildFeature = "DISCOVERABLE"
-	GuildFeatureFeaturable                    GuildFeature = "FEATURABLE"
-	GuildFeatureInviteSplash                  GuildFeature = "INVITE_SPLASH"
-	GuildFeatureMemberVerificationGateEnabled GuildFeature = "MEMBER_VERIFICATION_GATE_ENABLED"
-	GuildFeatureMonetizationEnabled           GuildFeature = "MONETIZATION_ENABLED"
-	GuildFeatureMoreStickers                  GuildFeature = "MORE_STICKERS"
-	GuildFeatureNews                          GuildFeature = "NEWS"
-	GuildFeaturePartnered                     GuildFeature = "PARTNERED"
-	GuildFeaturePreviewEnabled                GuildFeature = "PREVIEW_ENABLED"
-	GuildFeaturePrivateThreads                GuildFeature = "PRIVATE_THREADS"
-	GuildFeatureRoleIcons                     GuildFeature = "ROLE_ICONS"
-	GuildFeatureTicketedEventsEnabled         GuildFeature = "TICKETED_EVENTS_ENABLED"
-	GuildFeatureVanityURL                     GuildFeature = "VANITY_URL"
-	GuildFeatureVerified                      GuildFeature = "VERIFIED"
-	GuildFeatureVipRegions                    GuildFeature = "VIP_REGIONS"
-	GuildFeatureWelcomeScreenEnabled          GuildFeature = "WELCOME_SCREEN_ENABLED"
+	GuildFeatureAnimatedBanner                        GuildFeature = "ANIMATED_BANNER"
+	GuildFeatureAnimatedIcon                          GuildFeature = "ANIMATED_ICON"
+	GuildFeatureApplicationCommandPermissionV2        GuildFeature = "APPLICATION_COMMAND_PERMISSIONS_V2"
+	GuildFeatureAutoModeration                        GuildFeature = "AUTO_MODERATION"
+	GuildFeatureBanner                                GuildFeature = "BANNER"
+	GuildFeatureCommunity                             GuildFeature = "COMMUNITY"
+	GuildFeatureCreatorMonetizableProvisional         GuildFeature = "CREATOR_MONETIZABLE_PROVISIONAL"
+	GuildFeatureCreatorStorePage                      GuildFeature = "CREATOR_STORE_PAGE"
+	GuildFeatureDeveloperSupportServer                GuildFeature = "DEVELOPER_SUPPORT_SERVER"
+	GuildFeatureDiscoverable                          GuildFeature = "DISCOVERABLE"
+	GuildFeatureFeaturable                            GuildFeature = "FEATURABLE"
+	GuildFeatureInvitesDisabled                       GuildFeature = "INVITES_DISABLED"
+	GuildFeatureInviteSplash                          GuildFeature = "INVITE_SPLASH"
+	GuildFeatureMemberVerificationGateEnabled         GuildFeature = "MEMBER_VERIFICATION_GATE_ENABLED"
+	GuildFeatureMoreSoundboard                        GuildFeature = "MORE_SOUNDBOARD"
+	GuildFeatureMoreStickers                          GuildFeature = "MORE_STICKERS"
+	GuildFeatureNews                                  GuildFeature = "NEWS"
+	GuildFeaturePartnered                             GuildFeature = "PARTNERED"
+	GuildFeaturePreviewEnabled                        GuildFeature = "PREVIEW_ENABLED"
+	GuildFeatureRaidAlertsDisabled                    GuildFeature = "RAID_ALERTS_DISABLED"
+	GuildFeatureRoleIcons                             GuildFeature = "ROLE_ICONS"
+	GuildFeatureRoleSubscriptionsAvailableForPurchase GuildFeature = "ROLE_SUBSCRIPTIONS_AVAILABLE_FOR_PURCHASE"
+	GuildFeatureRoleSubscriptionsEnabled              GuildFeature = "ROLE_SUBSCRIPTIONS_ENABLED"
+	GuildFeatureSoundboard                            GuildFeature = "SOUNDBOARD"
+	GuildFeatureTicketedEventsEnabled                 GuildFeature = "TICKETED_EVENTS_ENABLED"
+	GuildFeatureVanityURL                             GuildFeature = "VANITY_URL"
+	GuildFeatureVerified                              GuildFeature = "VERIFIED"
+	GuildFeatureVipRegions                            GuildFeature = "VIP_REGIONS"
+	GuildFeatureWelcomeScreenEnabled                  GuildFeature = "WELCOME_SCREEN_ENABLED"
 )
 
 // A GuildParams stores all the data needed to update discord guild settings
@@ -3016,6 +3027,8 @@ const (
 	IntentGuildScheduledEvents        Intent = 1 << 16
 	IntentAutoModerationConfiguration Intent = 1 << 20
 	IntentAutoModerationExecution     Intent = 1 << 21
+	IntentGuildMessagePolls           Intent = 1 << 24
+	IntentDirectMessagePolls          Intent = 1 << 25
 
 	// TODO: remove when compatibility is not needed
 

@@ -52,7 +52,7 @@ const (
 type VoiceConnection struct {
 	Cond *sync.Cond
 
-	// Status of this connection. Please don't change.
+	// Status of this connection. Read only
 	Status VoiceConnectionStatus
 
 	// Closed if this VoiceConection status become Dead
@@ -246,8 +246,8 @@ type voiceOP8 struct {
 	HeartbeatInterval int `json:"heartbeat_interval"`
 }
 
-// WaitUntilConnected waits for the Voice Connection to
-// become ready, if it does not become ready it returns an err
+// waitUntilStatus waits for connection to be in given VoiceConnectionStatus
+// returns error if context timeout or VoiceConnection.Err
 func (v *VoiceConnection) waitUntilStatus(ctx context.Context, status VoiceConnectionStatus) error {
 	v.log(LogInformational, "called")
 
@@ -478,9 +478,11 @@ func (v *VoiceConnection) websocket(ctx context.Context, endpoint string, token 
 				}
 
 				// 4014 indicates a manual disconnection by someone in the guild;
+				// 4021 indicates that the voice connection was dropped due to rate limiting;
+				// 4022 indicates that the call was terminated (e.g., channel deleted, voice server changed, call ended).
 				// we shouldn't reconnect.
-				if websocket.IsCloseError(err, 4014) {
-					v.log(LogInformational, "received 4014 manual disconnection")
+				if websocket.IsCloseError(err, 4014, 4021, 4022) {
+					v.log(LogInformational, "received close code disconnected")
 
 					return
 				}
@@ -543,7 +545,7 @@ func (v *VoiceConnection) onEvent(ctx context.Context, binary bool, message []by
 			op2 := voiceOP2{}
 
 			if err := json.Unmarshal(e.RawData, &op2); err != nil {
-				err := fmt.Errorf("OP2 unmarshal error, %s, %s", err, string(e.RawData))
+				err := fmt.Errorf("OP2 unmarshal error, %w, %s", err, string(e.RawData))
 				v.failure(err)
 				return
 			}
@@ -556,7 +558,7 @@ func (v *VoiceConnection) onEvent(ctx context.Context, binary bool, message []by
 			// Start the UDP connection
 			err := v.udpOpen(ctx)
 			if err != nil {
-				err := fmt.Errorf("error opening udp connection, %s", err)
+				err := fmt.Errorf("error opening udp connection, %w", err)
 				v.failure(err)
 				return
 			}
@@ -566,7 +568,7 @@ func (v *VoiceConnection) onEvent(ctx context.Context, binary bool, message []by
 		case 4: // udp encryption secret key
 			op4 := voiceOP4{}
 			if err := json.Unmarshal(e.RawData, &op4); err != nil {
-				err := fmt.Errorf("OP4 unmarshal error, %s, %s", err, string(e.RawData))
+				err := fmt.Errorf("OP4 unmarshal error, %w, %s", err, string(e.RawData))
 				v.failure(err)
 				return
 			}
@@ -945,7 +947,7 @@ func (v *VoiceConnection) opusSender(ctx context.Context, rate, size int) {
 			return
 		}
 
-		// don't care overflow because it is already defined in Go spec
+		// don't care if it overflows because it is already defined in Go spec
 		// https://go.dev/ref/spec#Integer_overflow
 		sequence++
 		timestamp += uint32(size)
